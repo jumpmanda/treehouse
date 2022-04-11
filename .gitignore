@@ -107,4 +107,5 @@ dist
 .DS_Store
 
 #Temporary files
-src/audio/*
+api/audio/*
+api/services/wellsaid/output/*

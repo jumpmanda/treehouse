@@ -18,13 +18,10 @@ class sttController {
     }
 
     getText = async (req: express.Request, res: express.Response, next: express.NextFunction) => {    
-        const { originalLanguageCode, targetLanguageCode } = req.body; 
+        const { originalLanguageCode } = req.body; 
         
         if(!originalLanguageCode)
             throw new Error('Please provide original language code.'); 
-    
-        if(!targetLanguageCode)
-        throw new Error('Please provide original language code.'); 
     
         console.log('Fetching speech...'); 
         console.log('Uploaded file name: ' + req.file?.filename); 
@@ -41,7 +38,7 @@ class sttController {
             throw new Error('Failed to generate audio. Could not get transcript.')
     
         res.locals.transcript = response; 
-        res.locals.languageCode = targetLanguageCode; 
+        res.locals.languageCode = 'en'; // For now, we can only generate english audio 
     
         next(); 
     }; 

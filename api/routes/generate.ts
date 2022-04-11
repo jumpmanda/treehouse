@@ -4,6 +4,7 @@ import multer from 'multer';
 import {v4} from 'uuid';
 import sttController from "../controllers/sttController";
 import TranslateController from "../controllers/translateController";
+import ttsController from "../controllers/ttsController";
 
 dotenv.config();
 
@@ -14,8 +15,11 @@ const storage = multer.diskStorage({
   filename: function(req, file, callback) {
     const results = fileExtensionRe.exec(file.originalname); 
     if(!results) callback(new Error('Wrong file type. Must be mp3.'), file.originalname); 
-    else if(results && results.length > 0)
-      callback(null, `${v4()}${results[0]}`);
+    else if(results && results.length > 0){
+      const fileName = `${v4()}${results[0]}${v4()}${results[0]}`;
+      callback(null, fileName);
+        }
+      
   }
 });
 
@@ -23,13 +27,24 @@ const uploader = multer({ storage: storage });
 
 const speechToTextCtrl = new sttController(); 
 const translateCtrl = new TranslateController(); 
+const ttsCtrl = new ttsController(); 
 
 const router = express.Router();
 
-router.post('/', 
+router.post('/transcript', 
   uploader.single('speech'), 
   speechToTextCtrl.getText, 
-  translateCtrl.translate
+  translateCtrl.translate,
+  (req, res)=>{ 
+    res.status(200).send({ text: res.locals.translatedText}) 
+  }, 
+); 
+
+router.post('/audio', 
+  uploader.single('speech'), 
+  speechToTextCtrl.getText, 
+  translateCtrl.translate,
+  ttsCtrl.getTTS, 
 ); 
 
 module.exports = router;

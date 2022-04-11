@@ -7,7 +7,7 @@ class TranslateController {
         this.translateService = new TranslateService(); 
     }
 
-    translate = async (req: express.Request, res: express.Response) => {
+    translate = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
         console.log('Starting request for translation...'); 
     
         try {
@@ -19,7 +19,8 @@ class TranslateController {
             console.log('recieved transcript ', transcript); 
    
             const text = await this.translateService.translate(transcript, languageCode); 
-            res.send({ text }); 
+            res.locals.translatedText = text; 
+            next();  
         }
         catch(err){
             console.error(err); 

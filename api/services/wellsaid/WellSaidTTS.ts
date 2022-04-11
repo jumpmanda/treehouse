@@ -1,12 +1,15 @@
 import dotenv from "dotenv";
-import fs from "fs";
+import fs, { mkdir } from "fs";
 import fetch from "node-fetch";
 import AbortController from "abort-controller";
+import {v4} from 'uuid';
+import path from "path";
 
 dotenv.config();
 
-const { WELLSAID_API_KEY } = process.env;
+const { WELLSAID_API_KEY, WELLSAID_API_ENDPOINT } = process.env;
 
+// See https://developer.wellsaidlabs.com
 /*** * Sample request handler for interacting with the WellSaid Labs TTS api. This is meant as a reference
  * * and not a library or usable code.
   *
@@ -30,14 +33,27 @@ const { WELLSAID_API_KEY } = process.env;
    if(!WELLSAID_API_KEY)
     throw new Error('Failed to get WellSaid TTS API Key.'); 
 
+    if(!WELLSAID_API_ENDPOINT)
+      throw new Error('Failed to get Wellsaid API Endpoint.'); 
+
+  // const homedir = require('os')
+  
+  // mkdir(require('path').join(homedir, 'output'), (err) => {
+  //   if(err)
+  //   {
+  //     console.error(`Failed to setup output directory. ${err.message}`); 
+  //     throw new Error("Failed to setup output directory."); 
+  //   }
+  // });
+
    const ttsAbortController = new AbortController();
-   const ttsEndPoint = "https://api.wellsaidlabs.com/v1/tts/stream";
    let ttsResponse;
    try {
-     ttsResponse = await fetch(ttsEndPoint, {
+     ttsResponse = await fetch(WELLSAID_API_ENDPOINT, {
        signal: ttsAbortController.signal,
        method: "POST",
        headers: {
+         "Accept": "audio/mpeg", 
          "Content-Type": "application/json",
          "X-Api-Key": WELLSAID_API_KEY
        },
@@ -50,40 +66,35 @@ const { WELLSAID_API_KEY } = process.env;
      // Most likely a network related error
      throw new Error("Service is currently unavailable");
    }
- ​
+
    if (!ttsResponse.ok) {
      /**
       * The TTS request failed with an error. Attempt to parse the error message from the response.
       */
      let errorMessage = "Failed to render";
+     console.error("TTS Request failed."); 
      try {
        const { message } = await ttsResponse.json();
        errorMessage = message;
      } catch (error) {}
      throw new Error(errorMessage);
    }
- ​
-   /**
-    * At this point we have a successful response and can begin processing/storing. If forwarding
-    * this request to the client, you will need to pass along the headers describing the content
-    * type etc. This is what forwarding the headers might look like in an express response:
-    *
-    *   response.writeHead(ttsResponse.status, ttsResponse.headers.raw());
-    *   response.flushHeaders();
-    */
-   const contentType = ttsResponse.headers.get("Content-Type");
- ​
+
    /**
     * We can now handle the TTS response. This is a streamed response that we will store to disk for
     * example purposes. Note that we can pipe this stream to multiple locations, for example both
     * the client and storage.
     */
-   const storageWriteStream = fs.createWriteStream("/tmp/somerandomfile");
+   const generatedFileName = `${v4()}.mp3`; 
+   const outputPath = path.join(__dirname, 'output', generatedFileName); 
+   const storageWriteStream = fs.createWriteStream(outputPath, { flags: 'a+'});
    ttsResponse.body.pipe(storageWriteStream);
- ​
+   
    try {
-     await new Promise((resolve, reject) => {
-       storageWriteStream.on("finish", resolve);
+     return await new Promise((resolve, reject) => {
+       storageWriteStream.on("finish", ()=>{
+         resolve(outputPath); 
+       });
        storageWriteStream.on("error", reject);
      });
    } catch (error) {
@@ -91,6 +102,7 @@ const { WELLSAID_API_KEY } = process.env;
       * An error occurred while writing to disk, this is a good example of when we might abort the TTS
       * request.
       */
+     console.error("Error generating TTS."); 
      ttsAbortController.abort();
      throw error;
    }

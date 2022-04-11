@@ -8,10 +8,20 @@ const PROJECT_ID = process.env.GOOGLE_TRANSLATE_PROJECT_ID;
 class CloudTranslate {
     translate: v2.Translate;
     constructor(){
-        this.translate = new v2.Translate({ projectId: PROJECT_ID }); 
+        this.translate = new v2.Translate({ projectId: PROJECT_ID });         
     }
 
     async translateFromText(text: string, languageCode: string) {
+       await this.checkCredentials(); 
+      
+        const [translation] = await this.translate.translate(text, languageCode);
+        console.log(`Text: ${text}`);
+        console.log(`Translation: ${translation}`);
+
+        return translation; 
+      }
+
+    async checkCredentials(){
         try {
             const credentials = await this.translate.authClient.getCredentials();
             console.log('Found email: ', credentials?.client_email); 
@@ -20,13 +30,7 @@ class CloudTranslate {
             console.error(err); 
             throw new Error("Failed to initialize google cloud translate api with credentials."); 
         }
-      
-        const [translation] = await this.translate.translate(text, languageCode);
-        console.log(`Text: ${text}`);
-        console.log(`Translation: ${translation}`);
-
-        return translation; 
-      }
+    }
 }
 
 export default CloudTranslate; 
